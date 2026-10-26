@@ -1,0 +1,35 @@
+# KontraksiKu - konfigurasi Apache (XAMPP / hosting)
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Teruskan semua permintaan non-file ke front controller
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Tipe MIME untuk PWA
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+    AddType application/manifest+json manifest.json
+    AddType application/javascript .js
+    AddType font/woff2 .woff2
+</IfModule>
+
+# Service worker & manifest tidak boleh di-cache lama agar pembaruan cepat diterima
+<FilesMatch "^(service-worker\.js|manifest\.json)$">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache"
+        Header set Service-Worker-Allowed "./"
+    </IfModule>
+</FilesMatch>
+
+<FilesMatch "^(router\.php)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>

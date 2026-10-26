@@ -1,0 +1,13 @@
+# Jika folder proyek diletakkan langsung di htdocs (http://localhost/kontraksiku/),
+# arahkan semua permintaan ke folder public/ dan blokir akses ke folder lain.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(app|bin|config|database|routes|storage|tests)(/|$) - [F,L]
+    RewriteRule ^\.env - [F,L]
+    RewriteRule ^$ public/ [L]
+    RewriteRule ^(?!public/)(.*)$ public/$1 [L]
+</IfModule>
+
+<FilesMatch "^\.(env|git)">
+    Require all denied
+</FilesMatch>

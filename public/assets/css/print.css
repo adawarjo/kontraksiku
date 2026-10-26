@@ -1,0 +1,21 @@
+/* Laporan cetak ramah printer (A4) */
+body.print-body { background: #fff; color: #111; font-size: 11pt; }
+.report { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+.toolbar { display: flex; gap: .5rem; margin-bottom: 1rem; }
+.report-header { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 2px solid #111; padding-bottom: .6rem; margin-bottom: .8rem; }
+.report-header h1 { font-size: 18pt; margin: 0 0 .3rem; }
+table.summary { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+table.summary td { border: 1px solid #999; padding: .4rem .6rem; width: 25%; font-size: 10pt; }
+table.data { width: 100%; border-collapse: collapse; font-size: 10pt; }
+table.data th, table.data td { border: 1px solid #999; padding: .3rem .45rem; vertical-align: top; }
+table.data th { background: #eee; text-align: left; }
+table.data tr { page-break-inside: avoid; }
+table.data thead { display: table-header-group; }
+.report-footer { margin-top: 1rem; font-size: 9pt; color: #444; border-top: 1px solid #999; padding-top: .5rem; }
+
+@page { size: A4; margin: 14mm; }
+@media print {
+    .no-print { display: none !important; }
+    .report { padding: 0; max-width: none; }
+    table.data th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

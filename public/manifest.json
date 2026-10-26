@@ -1,0 +1,25 @@
+{
+  "name": "KontraksiKu - Pencatat Kontraksi",
+  "short_name": "KontraksiKu",
+  "description": "Catat waktu mulai, durasi, dan interval kontraksi menjelang persalinan. Alat bantu pencatatan, bukan alat diagnosis.",
+  "lang": "id",
+  "dir": "ltr",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf6f3",
+  "theme_color": "#c2577a",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Timer Kontraksi", "short_name": "Timer", "url": "./", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Riwayat", "short_name": "Riwayat", "url": "./riwayat", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

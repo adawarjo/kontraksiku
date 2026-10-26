@@ -1,0 +1,11 @@
+.env
+.env.testing
+storage/logs/*
+!storage/logs/.gitkeep
+storage/sessions/*
+!storage/sessions/.gitkeep
+node_modules/
+tests/e2e/node_modules/
+tests/e2e/screenshots/
+.DS_Store
+Thumbs.db
