@@ -15,9 +15,14 @@
                 <input type="email" class="form-control form-control-lg" id="email" name="email" required autocomplete="email" inputmode="email"
                        value="<?= e($old['email'] ?? '') ?>" autofocus>
             </div>
-            <div class="mb-4">
+            <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
                 <input type="password" class="form-control form-control-lg" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox" id="remember" name="remember" value="1"<?= !empty($old['remember']) ? ' checked' : '' ?>>
+                <label class="form-check-label" for="remember">Ingat saya selama <?= (int) $rememberDays ?> hari</label>
+                <div class="form-text">Jangan dicentang di perangkat umum atau milik orang lain.</div>
             </div>
             <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill">
                 <span class="btn-label"><i class="bi bi-box-arrow-in-right"></i> Masuk</span>

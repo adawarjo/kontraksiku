@@ -10,6 +10,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Services\AuthService;
+use App\Services\RememberMeService;
 
 final class AuthController extends Controller
 {
@@ -19,12 +20,14 @@ final class AuthController extends Controller
             'title'   => 'Masuk',
             'success' => Session::pullFlash('success'),
             'allowRegistration' => (bool) config('app.allow_registration'),
+            'rememberDays' => RememberMeService::days(),
         ], 'layouts/auth');
     }
 
     public function login(): string
     {
         $email = (string) Request::input('email', '');
+        $remember = Request::input('remember') === '1';
         try {
             $user = (new AuthService())->attempt($email, (string) Request::input('password', ''), Request::ip());
         } catch (HttpException $e) {
@@ -35,11 +38,12 @@ final class AuthController extends Controller
             return $this->view('auth/login', [
                 'title' => 'Masuk',
                 'error' => $e->getMessage(),
-                'old'   => ['email' => $email],
+                'old'   => ['email' => $email, 'remember' => $remember],
                 'allowRegistration' => (bool) config('app.allow_registration'),
+                'rememberDays' => RememberMeService::days(),
             ], 'layouts/auth');
         }
-        Auth::login($user);
+        Auth::login($user, $remember);
         Response::redirect('');
     }
 

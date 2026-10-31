@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Contraction;
 use App\Services\AuthService;
 use App\Services\ContractionService;
+use App\Services\RememberMeService;
 use App\Services\StatsService;
 use App\Services\TimeService;
 
@@ -278,6 +279,52 @@ T::test('Login benar/salah dan pembatasan percobaan login', function () {
         T::throwsHttp(422, fn () => $auth->attempt('hana@contoh.test', 'salah', '10.0.0.2'));
     }
     T::throwsHttp(429, fn () => $auth->attempt('hana@contoh.test', 'rahasia123', '10.0.0.2'), 'terkunci walau password benar');
+});
+
+T::test('Ingat saya: token sah memulihkan login; hanya hash yang disimpan; berlaku 30 hari', function () {
+    $remember = new RememberMeService();
+    $user = (new App\Models\User())->find(make_user('rina@contoh.test'));
+    $token = $remember->issue($user);
+    T::ok(preg_match('/^[a-f0-9]{24}:[a-f0-9]{64}$/', $token['value']) === 1, 'format selector:validator');
+    T::ok(abs($token['expires'] - (time() + 30 * 86400)) < 5, 'kedaluwarsa 30 hari');
+    [$selector, $validator] = explode(':', $token['value']);
+    T::eq(0, db_count('SELECT COUNT(*) FROM remember_tokens WHERE token_hash = ?', [$validator]), 'validator tidak disimpan mentah');
+    T::eq($user['id'], $remember->resolve($token['value'])['id'] ?? null);
+    T::eq($user['id'], $remember->resolve($token['value'])['id'] ?? null, 'dapat dipakai berulang (tab paralel)');
+    T::eq(null, $remember->resolve('bukan-token'));
+    T::eq(null, $remember->resolve($selector . ':' . str_repeat('0', 64)), 'validator salah ditolak');
+    T::eq(null, $remember->resolve($token['value']), 'token dicabut setelah validator salah');
+});
+
+T::test('Ingat saya: token tidak berlaku setelah kedaluwarsa, logout, ganti password, atau akun nonaktif', function () {
+    $remember = new RememberMeService();
+    $users = new App\Models\User();
+    $user = $users->find(make_user('sinta@contoh.test'));
+
+    $token = $remember->issue($user);
+    App\Core\Database::connection()->exec('UPDATE remember_tokens SET expires_at = UTC_TIMESTAMP() - INTERVAL 1 MINUTE');
+    T::eq(null, $remember->resolve($token['value']), 'kedaluwarsa');
+
+    $token = $remember->issue($user);
+    $remember->revoke($token['value']);
+    T::eq(null, $remember->resolve($token['value']), 'dicabut saat logout');
+
+    $token = $remember->issue($user);
+    $users->setPassword($user['id'], password_hash('passwordbaru1', PASSWORD_DEFAULT), false);
+    T::eq(null, $remember->resolve($token['value']), 'password diganti');
+
+    $user = $users->find($user['id']);
+    $token = $remember->issue($user);
+    $users->setActive($user['id'], false);
+    T::eq(null, $remember->resolve($token['value']), 'akun nonaktif');
+
+    $users->setActive($user['id'], true);
+    $remember->issue($users->find($user['id']));
+    $users->setPassword($user['id'], password_hash('passwordbaru2', PASSWORD_DEFAULT), false);
+    $remember->issue($users->find($user['id']));
+    T::eq(1, db_count('SELECT COUNT(*) FROM remember_tokens WHERE user_id = ?', [$user['id']]), 'token basi dibersihkan saat token baru dibuat');
+    $users->delete($user['id']);
+    T::eq(0, db_count('SELECT COUNT(*) FROM remember_tokens WHERE user_id = ?', [$user['id']]), 'ikut terhapus bersama akun');
 });
 
 T::test('Hapus akun menghapus seluruh data terkait (cascade)', function () use ($svc) {

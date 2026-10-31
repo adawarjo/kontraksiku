@@ -11,6 +11,7 @@ return [
     'timezone'             => Env::get('APP_TIMEZONE', 'Asia/Jakarta'),
     'session_lifetime'     => (int) Env::get('SESSION_LIFETIME_MINUTES', '720'),
     'session_secure'       => Env::bool('SESSION_SECURE_COOKIE', false),
+    'remember_days'        => (int) Env::get('REMEMBER_LOGIN_DAYS', '30'),
     'login_max_attempts'   => (int) Env::get('LOGIN_MAX_ATTEMPTS', '5'),
     'login_lock_minutes'   => (int) Env::get('LOGIN_LOCK_MINUTES', '15'),
 

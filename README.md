@@ -148,7 +148,7 @@ Ada dua peran: **Pengguna** (ibu/pendamping) dan **Admin**. Admin juga dapat mem
 - Sistem selalu menyisakan **minimal satu admin aktif**.
 - Semua aksi memakai POST + CSRF + konfirmasi SweetAlert2; password tidak pernah dicatat di log.
 
-**Pengguna** dapat mengganti password sendiri di *Profil → Ganti password*; sesi di perangkat lain otomatis berakhir.
+**Pengguna** dapat mengganti password sendiri di *Profil → Ganti password*; sesi di perangkat lain (termasuk perangkat yang dipercaya lewat *Ingat saya*) otomatis berakhir.
 
 **Alat baris perintah** (`bin/admin.php`, hanya dari server — berguna bila admin lupa password):
 ```bash
@@ -166,6 +166,11 @@ mysql -u root kontraksiku < database/migrations/001_admin_roles.sql
 php bin/admin.php promote email-anda@contoh.com
 ```
 (XAMPP: impor `database/migrations/001_admin_roles.sql` lewat phpMyAdmin.) Semua pengguna perlu login ulang satu kali setelah pembaruan.
+
+Bila database dibuat sebelum fitur **Ingat saya** ada, jalankan juga migrasi 002 **sekali**:
+```bash
+mysql -u root kontraksiku < database/migrations/002_remember_tokens.sql
+```
 
 ---
 
@@ -243,6 +248,7 @@ Service worker **tidak pernah meng-cache** halaman HTML (berisi data pribadi), h
 
 - Password: `password_hash()` / `password_verify()` (rehash otomatis).
 - Session: cookie `HttpOnly`, `SameSite=Lax`, `Secure` di HTTPS, `use_strict_mode`, regenerasi ID saat login, timeout tidak aktif (default 12 jam agar tidak logout di tengah pencatatan).
+- **Ingat saya** (opsional saat login): perangkat dipercaya selama 30 hari (`REMEMBER_LOGIN_DAYS`), tidak diperpanjang otomatis. Cookie `KKREMEMBER` (`HttpOnly`, `SameSite=Lax`, `Secure` di HTTPS) berisi `selector:validator`; database hanya menyimpan hash SHA-256 validator. Token dicabut saat logout dan otomatis tidak berlaku bila password diganti/direset atau akun dinonaktifkan.
 - CSRF token untuk semua form dan API yang mengubah data (`_csrf` / header `X-CSRF-Token`); logout hanya via POST.
 - PDO prepared statements, `ATTR_EMULATE_PREPARES=false`; kolom urut di-*whitelist*.
 - Output di-escape (`htmlspecialchars`), catatan dibersihkan dari tag HTML, Content-Security-Policy ketat (tanpa inline script).
@@ -264,8 +270,8 @@ kontraksiku/
 │   ├── bootstrap.php          # autoloader, konfigurasi, helper
 │   ├── core/                  # Router, Request, Response, Session, Csrf, Auth, Database, View, Env, Logger
 │   ├── controllers/           # Auth, Dashboard, History, Profile, Page, Api
-│   ├── models/                # User, PregnancyProfile, ContractionSession, Contraction, LoginAttempt
-│   ├── services/              # ContractionService, StatsService, AuthService, TimeService, ContractionPresenter
+│   ├── models/                # User, PregnancyProfile, ContractionSession, Contraction, LoginAttempt, RememberToken
+│   ├── services/              # ContractionService, StatsService, AuthService, RememberMeService, TimeService, ContractionPresenter
 │   ├── middleware/            # Auth, Guest, Csrf
 │   └── views/                 # layouts, partials, halaman
 ├── bin/admin.php              # CLI: buat/promosikan admin, reset password
@@ -319,7 +325,7 @@ node tests/e2e/e2e.js        # screenshot tersimpan di tests/e2e/screenshots/
 
 > Uji HTTP menyalakan server bawaan PHP lewat shell Unix, jadi hanya berjalan di Linux/macOS/WSL. Di Windows (Laragon/XAMPP) jalankan `php tests/run.php service`.
 
-Hasil terakhir: **66/66** uji PHP dan **19/19** uji E2E lulus (PHP 8.3, MariaDB 10.11, Chromium).
+Hasil terakhir: **71/71** uji PHP (PHP 8.3, MySQL 8.4) dan **19/19** uji E2E lulus (PHP 8.3, MariaDB 10.11, Chromium).
 
 | # | Kebutuhan | Diuji di |
 |---|---|---|
@@ -339,6 +345,7 @@ Hasil terakhir: **66/66** uji PHP dan **19/19** uji E2E lulus (PHP 8.3, MariaDB 
 | 14 | Tanggal tidak valid ditolak | Service, HTTP, E2E |
 | 15 | Sinkronisasi tanpa data ganda | Service, HTTP, E2E |
 | + | Konflik timestamp, pergantian hari (tengah malam WIB), sesi belum selesai | Service |
+| + | Ingat saya 30 hari: login pulih tanpa session, token dicabut saat logout, tidak berlaku setelah ganti password/nonaktif/kedaluwarsa | Service, HTTP |
 | + | Admin: akses 403 untuk non-admin, tambah/ubah/nonaktif/hapus, reset password memutus sesi, wajib ganti password, minimal 1 admin, audit tanpa password | Service, HTTP, E2E |
 
 ---
@@ -360,7 +367,8 @@ Hasil terakhir: **66/66** uji PHP dan **19/19** uji E2E lulus (PHP 8.3, MariaDB 
 | Badge “belum tersinkron” tidak hilang | Pastikan online & masih login; tekan **Sinkronkan**. Item “Ditolak server” perlu *Coba lagi* atau *Buang*. |
 | CSV berantakan di Excel | File memakai pemisah `;` dan UTF-8 BOM (cocok untuk Excel berbahasa Indonesia). Di Excel versi lain gunakan Data → From Text/CSV dan pilih pemisah titik koma. |
 | Jam kontraksi tidak sesuai | Waktu memakai jam perangkat; pastikan jam & zona waktu HP/PC benar. |
-| Logout otomatis | Atur `SESSION_LIFETIME_MINUTES` di `.env`; folder `storage/sessions` harus dapat ditulis. |
+| Logout otomatis | Centang **Ingat saya** saat login, atau atur `SESSION_LIFETIME_MINUTES` di `.env`; folder `storage/sessions` harus dapat ditulis. |
+| Error “Table … remember_tokens doesn't exist” | Database versi lama: jalankan `database/migrations/002_remember_tokens.sql`. |
 
 ---
 

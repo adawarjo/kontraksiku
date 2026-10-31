@@ -85,10 +85,14 @@ final class Http
         throw new RuntimeException("Token CSRF tidak ditemukan di $path (status {$res['status']})");
     }
 
-    public function login(string $email, string $password): array
+    public function login(string $email, string $password, bool $remember = false): array
     {
         $this->loadCsrf('/login');
-        $res = $this->request('POST', '/login', ['_csrf' => $this->csrf, 'email' => $email, 'password' => $password]);
+        $form = ['_csrf' => $this->csrf, 'email' => $email, 'password' => $password];
+        if ($remember) {
+            $form['remember'] = '1';
+        }
+        $res = $this->request('POST', '/login', $form);
         if ($res['status'] === 303) {
             // Ikuti pengalihan (mis. ke /ganti-password bila wajib ganti password)
             $home = $this->request('GET', '/');
@@ -105,6 +109,24 @@ final class Http
     public function jar(): string
     {
         return $this->jar;
+    }
+
+    /** Hapus cookie dari jar (mensimulasikan browser ditutup / session kedaluwarsa). */
+    public function dropCookie(string $name): void
+    {
+        $lines = file($this->jar) ?: [];
+        $keep = array_filter($lines, static fn ($l) => !str_contains($l, "\t$name\t"));
+        file_put_contents($this->jar, implode('', $keep));
+    }
+
+    public function cookie(array $res, string $name): ?string
+    {
+        foreach ($res['headers']['set-cookie'] ?? [] as $c) {
+            if (str_starts_with($c, "$name=")) {
+                return $c;
+            }
+        }
+        return null;
     }
 }
 
@@ -360,6 +382,51 @@ T::test('Logout hanya via POST + CSRF dan mengakhiri session', function () use (
     $r = $a->request('POST', '/logout', ['_csrf' => $a->csrf]);
     T::eq(303, $r['status']);
     T::eq(401, $a->api('GET', '/api/state')['status']);
+});
+
+T::test('Login tanpa "ingat saya" tidak membuat cookie token', function () use ($base) {
+    $c = new Http($base);
+    $r = $c->login('ayu@contoh.test', 'rahasia123');
+    T::eq(303, $r['status']);
+    T::eq(null, $c->cookie($r, 'KKREMEMBER'));
+    $c->dropCookie('KKSESSID');
+    T::eq(401, $c->api('GET', '/api/state')['status'], 'tanpa session harus login ulang');
+});
+
+T::test('Ingat saya: cookie 30 hari HttpOnly, login pulih saat session hilang, logout mencabut token', function () use ($base) {
+    $c = new Http($base);
+    $r = $c->login('ayu@contoh.test', 'rahasia123', true);
+    T::eq(303, $r['status']);
+    $cookie = (string) $c->cookie($r, 'KKREMEMBER');
+    T::ok(preg_match('/^KKREMEMBER=([a-f0-9]{24}%3A[a-f0-9]{64});/', $cookie, $m) === 1, 'cookie token dikirim');
+    $value = $m[1];
+    T::ok(stripos($cookie, 'HttpOnly') !== false && stripos($cookie, 'SameSite=Lax') !== false, 'cookie HttpOnly & SameSite');
+    T::ok(preg_match('/Max-Age=(\d+)/', $cookie, $age) === 1 && abs((int) $age[1] - 30 * 86400) < 10, 'berlaku 30 hari');
+
+    $c->dropCookie('KKSESSID'); // browser ditutup / session timeout
+    T::eq(200, $c->request('GET', '/')['status'], 'login pulih dari token');
+    T::eq(303, $c->request('GET', '/login')['status'], 'halaman login mengarahkan ke dashboard');
+
+    $c->loadCsrf('/');
+    $r = $c->request('POST', '/logout', ['_csrf' => $c->csrf]);
+    T::ok(str_contains((string) $c->cookie($r, 'KKREMEMBER'), 'KKREMEMBER=deleted'), 'cookie dihapus saat logout');
+    $stolen = new Http($base);
+    T::eq(401, $stolen->request('GET', '/api/state', null, ['Cookie: KKREMEMBER=' . $value], true)['status'], 'token lama tidak berlaku lagi');
+});
+
+T::test('Ganti password: perangkat ini tetap dipercaya, token perangkat lain tidak berlaku', function () use ($base) {
+    make_user('dewi@contoh.test');
+    $hp = new Http($base);
+    $laptop = new Http($base);
+    T::eq(303, $hp->login('dewi@contoh.test', 'rahasia123', true)['status']);
+    T::eq(303, $laptop->login('dewi@contoh.test', 'rahasia123', true)['status']);
+    $hp->loadCsrf('/ganti-password');
+    $r = $hp->request('POST', '/ganti-password', ['_csrf' => $hp->csrf, 'current_password' => 'rahasia123', 'password' => 'dewibaru123', 'password_confirmation' => 'dewibaru123']);
+    T::eq(303, $r['status']);
+    $hp->dropCookie('KKSESSID');
+    $laptop->dropCookie('KKSESSID');
+    T::eq(200, $hp->api('GET', '/api/state')['status'], 'perangkat yang mengganti password tetap login');
+    T::eq(401, $laptop->api('GET', '/api/state')['status'], 'perangkat lain wajib login ulang');
 });
 
 T::test('Pembatasan percobaan login (429 setelah 5 kali gagal)', function () use ($base) {

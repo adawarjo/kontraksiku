@@ -53,6 +53,7 @@ final class AccountController extends Controller
         Session::regenerate();
         Session::set('session_version', $version);
         Auth::refresh();
+        Auth::renewRemember();
         Session::flash('success', 'Password berhasil diganti. Sesi login di perangkat lain telah diakhiri.');
         Response::redirect('ganti-password');
     }
