@@ -8,8 +8,10 @@ use App\Core\Auth;
 use App\Core\HttpException;
 use App\Core\Request;
 use App\Models\Contraction;
+use App\Models\ContractionSession;
 use App\Models\PregnancyProfile;
 use App\Services\ContractionPresenter;
+use App\Services\ReportService;
 use App\Services\TimeService;
 
 final class HistoryController extends Controller
@@ -85,24 +87,55 @@ final class HistoryController extends Controller
         exit;
     }
 
+    /**
+     * Laporan cetak dikelompokkan per sesi.
+     * ?sesi=<id>|terakhir -> satu sesi (dari Beranda/Grafik); tanpa sesi -> filter tanggal Riwayat.
+     */
     public function printReport(): string
     {
         $userId = $this->userId();
-        $filters = $this->filters();
-        if ($filters['errors']) {
-            throw new HttpException(422, implode(' ', $filters['errors']));
-        }
         $model = new Contraction();
-        $result = $model->history($userId, $filters['from_utc'], $filters['to_utc'], 'started_at', 'asc', 5000, 0);
+        $sessionParam = (string) Request::query('sesi', '');
+        if ($sessionParam !== '') {
+            $session = $this->reportSession($userId, $sessionParam);
+            $rows = $session ? $model->listBySession((int) $session['id'], $userId) : [];
+            $scope = ['Sesi', $session
+                ? TimeService::localDateTime($session['started_at']) . ' s.d. ' . ($session['ended_at'] ? TimeService::localDateTime($session['ended_at']) : 'sekarang')
+                : 'Belum ada sesi pencatatan'];
+        } else {
+            $filters = $this->filters();
+            if ($filters['errors']) {
+                throw new HttpException(422, implode(' ', $filters['errors']));
+            }
+            $rows = $model->history($userId, $filters['from_utc'], $filters['to_utc'], 'started_at', 'asc', 5000, 0)['rows'];
+            $scope = ['Rentang', $filters['label']];
+        }
+        $sessions = (new ContractionSession())->findManyForUser(array_column($rows, 'session_id'), $userId);
+
         return $this->view('history/print', [
-            'title'   => 'Laporan Kontraksi',
-            'user'    => Auth::user(),
-            'profile' => (new PregnancyProfile())->findByUser($userId),
-            'filters' => $filters,
-            'rows'    => array_map([ContractionPresenter::class, 'toArray'], $result['rows']),
-            'stats'   => $model->historyStats($userId, $filters['from_utc'], $filters['to_utc']),
+            'title'     => 'Laporan Kontraksi',
+            'user'      => Auth::user(),
+            'profile'   => (new PregnancyProfile())->findByUser($userId),
+            'scope'     => $scope,
+            'report'    => ReportService::build($rows, $sessions),
             'printedAt' => (new \DateTimeImmutable('now', TimeService::local()))->format('d-m-Y H:i:s'),
+            'scripts'   => ['vendor/chartjs/chart.umd.min.js', 'js/charts.js'],
         ], 'layouts/print');
+    }
+
+    /** Sesi untuk laporan: "terakhir" = sesi aktif/terbaru (null bila belum ada), atau ID milik pengguna. */
+    private function reportSession(int $userId, string $param): ?array
+    {
+        $sessions = new ContractionSession();
+        if ($param === 'terakhir') {
+            return $sessions->findLatest($userId);
+        }
+        $id = filter_var($param, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $session = $id ? $sessions->findForUser($id, $userId) : null;
+        if ($session === null) {
+            throw new HttpException(404, 'Sesi tidak ditemukan.');
+        }
+        return $session;
     }
 
     /** Cegah formula injection saat CSV dibuka di spreadsheet. */

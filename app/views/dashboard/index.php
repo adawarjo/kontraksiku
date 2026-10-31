@@ -64,7 +64,13 @@ $displayName = $profile['nickname'] ?: ($user['name'] ?? 'Bunda');
     <!-- Statistik -->
     <div class="col-12 col-xl-7">
         <section aria-labelledby="statsHeading">
-            <h2 id="statsHeading" class="section-title"><span id="statsScope"><?= ($state['session']['is_active'] ?? false) ? 'Sesi aktif' : 'Sesi terakhir' ?></span></h2>
+            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                <h2 id="statsHeading" class="section-title mb-0"><span id="statsScope"><?= ($state['session']['is_active'] ?? false) ? 'Sesi aktif' : 'Sesi terakhir' ?></span></h2>
+                <a id="printSessionLink" href="<?= e(url('cetak-laporan?sesi=terakhir')) ?>" target="_blank" rel="noopener"
+                   class="btn btn-outline-secondary btn-sm rounded-pill <?= $state['session'] ? '' : 'd-none' ?>" data-testid="print-session">
+                    <i class="bi bi-printer"></i> Cetak laporan sesi
+                </a>
+            </div>
             <div class="row g-2 g-md-3 stat-grid">
                 <div class="col-6 col-md-4"><div class="stat-card"><div class="stat-label">Jumlah kontraksi</div><div class="stat-value" data-stat="count"><?= (int) $s['count'] ?></div></div></div>
                 <div class="col-6 col-md-4"><div class="stat-card"><div class="stat-label">Durasi terakhir</div><div class="stat-value" data-stat="last_duration"><?= e(T::formatDuration($s['last_duration'])) ?></div></div></div>

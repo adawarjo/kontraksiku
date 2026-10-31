@@ -6,7 +6,14 @@
     var SAGE = '#2f7d6d', SAGE_FILL = 'rgba(47, 125, 109, .15)';
     var instances = {};
 
-    function fmt(v) { return global.KK ? KK.fmtDuration(v) : v + ' dtk'; }
+    // Halaman laporan cetak tidak memuat app.js (KK), jadi sediakan format mm:dd sendiri
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function fmt(v) {
+        if (global.KK) return KK.fmtDuration(v);
+        v = Math.max(0, Math.round(v));
+        var h = Math.floor(v / 3600), m = Math.floor((v % 3600) / 60), s = v % 60;
+        return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : pad(m) + ':' + pad(s);
+    }
 
     function baseOptions(extra) {
         return Object.assign({
@@ -52,9 +59,9 @@
     }
 
     global.KKCharts = {
-        /** Grafik gabungan dashboard: batang durasi + garis interval. */
-        combined: function (canvas, data) {
-            var opts = baseOptions();
+        /** Grafik gabungan dashboard & laporan cetak: batang durasi + garis interval. */
+        combined: function (canvas, data, extra) {
+            var opts = baseOptions(extra);
             opts.scales.y = timeAxis('Durasi', 'left');
             opts.scales.y1 = timeAxis('Interval', 'right', false);
             return draw(canvas, {

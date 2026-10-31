@@ -47,6 +47,25 @@ final class ContractionSession extends Model
         );
     }
 
+    /** Sesi tertentu milik pengguna beserta jumlah kontraksinya, diindeks per id. */
+    public function findManyForUser(array $ids, int $userId): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if (!$ids) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $rows = $this->fetchAll(
+            "SELECT s.*, COUNT(c.id) AS contraction_count
+               FROM contraction_sessions s
+          LEFT JOIN contractions c ON c.session_id = s.id
+              WHERE s.user_id = ? AND s.id IN ($placeholders)
+           GROUP BY s.id",
+            [$userId, ...$ids]
+        );
+        return array_column($rows, null, 'id');
+    }
+
     /** Daftar sesi pengguna (terbaru dulu) dengan jumlah kontraksi. */
     public function listForUser(int $userId, int $limit = 20): array
     {

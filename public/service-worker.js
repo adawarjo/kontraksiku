@@ -10,7 +10,7 @@
  */
 'use strict';
 
-var VERSION = 'kontraksiku-v1.1.0';
+var VERSION = 'kontraksiku-v1.2.0';
 var STATIC_CACHE = VERSION + '-static';
 
 var PRECACHE = [

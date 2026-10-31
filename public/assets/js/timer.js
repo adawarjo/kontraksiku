@@ -18,7 +18,7 @@
     var els = {
         display: $('timerDisplay'), sub: $('timerSub'), sync: $('timerSync'),
         cancel: $('cancelButton'), endSession: $('endSessionButton'), session: $('sessionStatus'),
-        recent: $('recentList'), windowSummary: $('windowSummary'), statsScope: $('statsScope'),
+        recent: $('recentList'), windowSummary: $('windowSummary'), statsScope: $('statsScope'), printSession: $('printSessionLink'),
         pendingSection: $('pendingSection'), pendingList: $('pendingList'),
         chart: $('dashboardChart'), chartBox: $('dashboardChartBox'), chartEmpty: $('dashboardChartEmpty')
     };
@@ -111,6 +111,7 @@
                 : '<span class="dot"></span> Belum ada sesi aktif. Tekan tombol untuk memulai.';
         }
         if (els.endSession) els.endSession.classList.toggle('d-none', !sessionActive);
+        if (els.printSession) els.printSession.classList.toggle('d-none', !s.session);
 
         if (els.windowSummary && s.window60) {
             var w = s.window60;

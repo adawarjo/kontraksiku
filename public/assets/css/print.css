@@ -11,6 +11,14 @@ table.data th, table.data td { border: 1px solid #999; padding: .3rem .45rem; ve
 table.data th { background: #eee; text-align: left; }
 table.data tr { page-break-inside: avoid; }
 table.data thead { display: table-header-group; }
+.report-session { margin-top: 1.2rem; }
+.report-session h2 { font-size: 13pt; margin: 0 0 .4rem; padding-bottom: .25rem; border-bottom: 1px solid #999; page-break-after: avoid; }
+.report-session .session-time { font-size: 10pt; font-weight: 400; color: #444; margin-left: .4rem; }
+.session-note, .session-stats { font-size: 10pt; margin: 0 0 .5rem; }
+.session-note { color: #444; font-style: italic; }
+.report-chart { margin: 0 0 .7rem; page-break-inside: avoid; }
+.report-chart canvas, .report-chart-img { display: block; width: 100%; height: auto; }
+.report-chart figcaption { font-size: 8.5pt; color: #555; margin-top: .2rem; }
 .report-footer { margin-top: 1rem; font-size: 9pt; color: #444; border-top: 1px solid #999; padding-top: .5rem; }
 
 @page { size: A4; margin: 14mm; }

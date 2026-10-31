@@ -35,6 +35,11 @@ $fmt = static fn (?int $v) => e(T::formatDuration($v));
             </select>
         </div>
         <noscript><button class="btn btn-primary">Tampilkan</button></noscript>
+        <?php if ($selected): ?>
+            <a class="btn btn-outline-secondary rounded-pill" href="<?= e(url('cetak-laporan?sesi=' . (int) $selected['id'])) ?>" target="_blank" rel="noopener" data-testid="print-session">
+                <i class="bi bi-printer"></i> Cetak laporan sesi
+            </a>
+        <?php endif; ?>
     </div>
 </form>
 

@@ -33,6 +33,7 @@ Dibangun dengan PHP native (tanpa framework, tanpa Composer) dan MySQL/MariaDB, 
 | **Dashboard** | Nama ibu, usia kehamilan (dari HPL), status sesi, jumlah kontraksi, durasi & interval terakhir, rata-rata, ringkasan 1 jam terakhir, grafik, riwayat terbaru, tombol timer besar |
 | **Timer** | Mulai/Akhiri dengan satu tombol, berbasis timestamp (akurat walau pindah tab/refresh), anti klik ganda, batalkan dengan konfirmasi, ringkasan SweetAlert2 + tambah catatan |
 | **Riwayat** | Tabel responsif (menjadi kartu di HP), filter rentang tanggal, cari tanggal, urutkan (waktu/durasi/interval), pagination, statistik rentang, detail/edit/hapus, ekspor CSV, cetak laporan |
+| **Cetak laporan** | Siap cetak / simpan PDF (A4): ringkasan, lalu rincian **per sesi** (statistik, grafik durasi & interval, tabel kontraksi). Dari menu *Cetak Laporan* (semua data), tombol di *Riwayat* (sesuai filter), serta tombol *Cetak laporan sesi* di *Beranda* (sesi aktif/terakhir) dan *Grafik* (sesi terpilih) |
 | **Profil** | Nama panggilan, HPL, tanggal mulai pencatatan, catatan, nama & kontak pendamping (semua opsional), hapus akun |
 | **Grafik** | Durasi per kontraksi, interval antarkontraksi, perbandingan paruh awal vs akhir sesi, statistik 30 & 60 menit terakhir |
 | **Info keselamatan** | Tanda bahaya, arahan menghubungi tenaga kesehatan |
@@ -271,7 +272,7 @@ kontraksiku/
 │   ├── core/                  # Router, Request, Response, Session, Csrf, Auth, Database, View, Env, Logger
 │   ├── controllers/           # Auth, Dashboard, History, Profile, Page, Api
 │   ├── models/                # User, PregnancyProfile, ContractionSession, Contraction, LoginAttempt, RememberToken
-│   ├── services/              # ContractionService, StatsService, AuthService, RememberMeService, TimeService, ContractionPresenter
+│   ├── services/              # ContractionService, StatsService, AuthService, RememberMeService, ReportService, TimeService, ContractionPresenter
 │   ├── middleware/            # Auth, Guest, Csrf
 │   └── views/                 # layouts, partials, halaman
 ├── bin/admin.php              # CLI: buat/promosikan admin, reset password
@@ -296,6 +297,7 @@ kontraksiku/
 | POST | `/logout` | Keluar |
 | GET | `/`, `/riwayat`, `/grafik`, `/profil`, `/info` | Halaman |
 | GET | `/ekspor-csv`, `/cetak-laporan` | Ekspor (mengikuti filter `dari`, `sampai`, `tanggal`) |
+| GET | `/cetak-laporan?sesi=<id>` / `?sesi=terakhir` | Laporan cetak satu sesi (sesi milik pengguna lain → 404) |
 | GET | `/api/state`, `/api/csrf` | Status dashboard, token |
 | POST | `/api/contractions/sync` | Mulai/akhiri/sinkron (idempoten, body `{uuid, started_at, ended_at, notes}`) |
 | POST | `/api/contractions/cancel` / `update` / `delete` | Batal, edit, hapus |
@@ -325,7 +327,7 @@ node tests/e2e/e2e.js        # screenshot tersimpan di tests/e2e/screenshots/
 
 > Uji HTTP menyalakan server bawaan PHP lewat shell Unix, jadi hanya berjalan di Linux/macOS/WSL. Di Windows (Laragon/XAMPP) jalankan `php tests/run.php service`.
 
-Hasil terakhir: **71/71** uji PHP (PHP 8.3, MySQL 8.4) dan **19/19** uji E2E lulus (PHP 8.3, MariaDB 10.11, Chromium).
+Hasil terakhir: **74/74** uji PHP (PHP 8.3, MySQL 8.4) dan **19/19** uji E2E lulus (PHP 8.3, MariaDB 10.11, Chromium).
 
 | # | Kebutuhan | Diuji di |
 |---|---|---|
@@ -339,6 +341,7 @@ Hasil terakhir: **71/71** uji PHP (PHP 8.3, MySQL 8.4) dan **19/19** uji E2E lul
 | 8 | Isolasi data antarpengguna | Service, HTTP |
 | 9 | Filter riwayat | Service, HTTP, E2E |
 | 10 | Ekspor CSV | HTTP, E2E |
+| + | Cetak laporan per sesi (statistik & grafik per sesi, sesi pengguna lain ditolak), tombol di Beranda/Grafik/menu | Service, HTTP |
 | 11 | Responsif layar kecil | E2E (Pixel 7 & 1366px, tanpa scroll horizontal) |
 | 12 | PWA dapat diinstal | HTTP (manifest/ikon), E2E (service worker aktif, cache) |
 | 13 | Data offline tidak diklaim tersimpan | E2E |

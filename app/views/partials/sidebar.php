@@ -1,10 +1,12 @@
 <?php
 use App\Core\Csrf;
 
+// Elemen ke-4 = buka di tab baru (laporan cetak)
 $items = [
     'home'    => ['', 'bi-stopwatch', 'Beranda'],
     'history' => ['riwayat', 'bi-clock-history', 'Riwayat'],
     'chart'   => ['grafik', 'bi-graph-up', 'Grafik'],
+    'report'  => ['cetak-laporan', 'bi-printer', 'Cetak Laporan', true],
     'info'    => ['info', 'bi-heart-pulse', 'Info Keselamatan'],
     'profile' => ['profil', 'bi-person-heart', 'Profil'],
 ];
@@ -18,8 +20,8 @@ if (App\Core\Auth::isAdmin()) {
         <span>Kontraksi<strong>Ku</strong></span>
     </a>
     <nav class="nav flex-column gap-1">
-        <?php foreach ($items as $key => [$path, $icon, $label]): ?>
-            <a class="nav-link <?= $nav === $key ? 'active' : '' ?>" href="<?= e(url($path)) ?>" <?= $nav === $key ? 'aria-current="page"' : '' ?>>
+        <?php foreach ($items as $key => $item): [$path, $icon, $label] = $item; ?>
+            <a class="nav-link <?= $nav === $key ? 'active' : '' ?>" href="<?= e(url($path)) ?>" <?= $nav === $key ? 'aria-current="page"' : '' ?><?= !empty($item[3]) ? ' target="_blank" rel="noopener"' : '' ?>>
                 <i class="bi <?= $icon ?>"></i> <?= e($label) ?>
             </a>
         <?php endforeach; ?>

@@ -10,6 +10,9 @@
 </head>
 <body class="print-body">
 <?= $content ?>
+<?php foreach ($scripts ?? [] as $script): ?>
+<script src="<?= e(asset($script)) ?>"></script>
+<?php endforeach; ?>
 <script src="<?= e(asset('js/print.js')) ?>"></script>
 </body>
 </html>

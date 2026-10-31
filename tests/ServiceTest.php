@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\Contraction;
+use App\Models\ContractionSession;
 use App\Services\AuthService;
 use App\Services\ContractionService;
 use App\Services\RememberMeService;
+use App\Services\ReportService;
 use App\Services\StatsService;
 use App\Services\TimeService;
 
@@ -257,6 +259,38 @@ T::test('Ringkasan pola deskriptif tanpa diagnosis', function () use ($svc) {
     foreach (['persalinan dimulai', 'segera melahirkan', 'diagnosis:'] as $bad) {
         T::ok(!str_contains(strtolower($p['text']), $bad), "tidak memuat '$bad'");
     }
+});
+
+T::test('Laporan cetak: kontraksi dikelompokkan per sesi dengan statistik & data grafik per sesi', function () use ($svc, $model, $alice) {
+    $lia = make_user('lia@contoh.test');
+    $now = time();
+    $at = static fn (int $secondsAgo) => ($now - $secondsAgo) * 1000;
+    foreach ([3000, 2700, 2400] as $s) {
+        $svc->sync($lia, uuid4(), $at($s), $at($s) + 40_000);
+    }
+    $svc->endSession($lia);
+    foreach ([600, 300] as $s) {
+        $svc->sync($lia, uuid4(), $at($s), $at($s) + 50_000);
+    }
+    $rows = $model->history($lia, null, null, 'started_at', 'asc', 100, 0)['rows'];
+    $sessionsModel = new ContractionSession();
+    $report = ReportService::build($rows, $sessionsModel->findManyForUser(array_column($rows, 'session_id'), $lia));
+
+    T::eq(2, count($report['sessions']), 'dua sesi');
+    [$first, $second] = $report['sessions'];
+    T::eq(3, $first['stats']['count']);
+    T::eq(3, $first['total']);
+    T::eq(40, $first['stats']['avg_duration']);
+    T::eq(300, $first['stats']['avg_interval']);
+    T::ok(!$first['active'] && $first['end'] !== null, 'sesi pertama selesai');
+    T::eq(2, $second['stats']['count']);
+    T::eq(true, $second['active']);
+    T::eq(null, $second['rows'][0]['interval_seconds'], 'kontraksi pertama sesi baru tanpa interval');
+    T::eq([null, 300], $second['chart']['intervals'], 'data grafik per sesi');
+    T::eq(5, $report['stats']['count']);
+    T::eq(40, $report['stats']['min_duration']);
+    T::eq(50, $report['stats']['max_duration']);
+    T::eq([], $sessionsModel->findManyForUser([$first['id']], $alice), 'sesi pengguna lain tidak ikut');
 });
 
 /* ---------- Autentikasi ---------- */

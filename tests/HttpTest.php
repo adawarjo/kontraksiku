@@ -336,6 +336,24 @@ T::test('Laporan cetak tersedia', function () use ($a) {
     T::ok(str_contains($r['body'], 'Laporan Kontraksi') && str_contains($r['body'], 'bukan hasil pemeriksaan'), 'isi laporan');
 });
 
+T::test('Laporan per sesi: sesi terakhir & sesi tertentu dengan grafik; sesi milik orang lain ditolak', function () use ($a, $b) {
+    $r = $a->request('GET', '/cetak-laporan?sesi=terakhir');
+    T::eq(200, $r['status']);
+    T::ok(str_contains($r['body'], 'Sesi: ') && str_contains($r['body'], 'data-testid="report-session"'), 'cakupan & bagian sesi');
+    T::ok(str_contains($r['body'], 'data-report-chart') && str_contains($r['body'], 'chart.umd.min.js'), 'grafik ikut tercetak');
+    $sessionId = db_count("SELECT MAX(s.id) FROM contraction_sessions s JOIN users u ON u.id = s.user_id WHERE u.email = 'ayu@contoh.test'");
+    T::eq(200, $a->request('GET', '/cetak-laporan?sesi=' . $sessionId)['status']);
+    T::eq(404, $b->request('GET', '/cetak-laporan?sesi=' . $sessionId)['status'], 'sesi pengguna lain');
+    T::eq(404, $a->request('GET', '/cetak-laporan?sesi=abc')['status'], 'ID tidak valid');
+});
+
+T::test('Tombol/menu cetak laporan tersedia di Beranda, Grafik, dan sidebar', function () use ($a) {
+    $home = $a->request('GET', '/')['body'];
+    T::ok(str_contains($home, 'cetak-laporan?sesi=terakhir'), 'tombol di Beranda');
+    T::ok(preg_match('#href="[^"]*/cetak-laporan"\s+target="_blank"#', $home) === 1, 'menu di sidebar');
+    T::ok(preg_match('#cetak-laporan\?sesi=\d+#', $a->request('GET', '/grafik')['body']) === 1, 'tombol di Grafik');
+});
+
 T::test('Profil: HPL tidak valid ditolak, data opsional tersimpan, usia kehamilan tampil', function () use ($a) {
     $csrf = $a->loadCsrf('/profil');
     $r = $a->request('POST', '/profil', ['_csrf' => $csrf, 'name' => 'Ayu', 'estimated_due_date' => '2026-02-31']);
