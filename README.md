@@ -16,13 +16,14 @@ Dibangun dengan PHP native (tanpa framework, tanpa Composer) dan MySQL/MariaDB, 
 5. [Instalasi di hosting PHP/MySQL](#instalasi-di-hosting-phpmysql)
 6. [Menjalankan dengan server bawaan PHP](#menjalankan-dengan-server-bawaan-php)
 7. [HTTPS & instalasi PWA](#https--instalasi-pwa)
-8. [Cara kerja perhitungan](#cara-kerja-perhitungan)
-9. [Mode offline & sinkronisasi](#mode-offline--sinkronisasi)
-10. [Keamanan](#keamanan)
-11. [Struktur folder](#struktur-folder)
-12. [Pengujian](#pengujian)
-13. [Troubleshooting](#troubleshooting)
-14. [Keterbatasan](#keterbatasan)
+8. [Sesi pencatatan](#sesi-pencatatan)
+9. [Cara kerja perhitungan](#cara-kerja-perhitungan)
+10. [Mode offline & sinkronisasi](#mode-offline--sinkronisasi)
+11. [Keamanan](#keamanan)
+12. [Struktur folder](#struktur-folder)
+13. [Pengujian](#pengujian)
+14. [Troubleshooting](#troubleshooting)
+15. [Keterbatasan](#keterbatasan)
 
 ---
 
@@ -215,6 +216,41 @@ Setelah memperbarui file JS/CSS di server, **naikkan nilai `VERSION`** di `publi
 
 ---
 
+## Sesi pencatatan
+
+**Sesi** adalah satu rangkaian pencatatan kontraksi yang berurutan, misalnya satu malam ketika kontraksi mulai terasa teratur. Sesi dipakai untuk menghitung interval dan untuk mengelompokkan data di Beranda, Grafik, dan laporan cetak.
+
+| Tahap | Yang terjadi |
+|---|---|
+| **Mulai** | Sesi dibuat otomatis saat kontraksi dicatat dan belum ada sesi aktif — tidak ada tombol "mulai sesi". Waktu mulai sesi = waktu mulai kontraksi pertamanya. |
+| **Berjalan** | Semua kontraksi berikutnya masuk ke sesi aktif. Satu akun hanya punya satu sesi aktif, termasuk saat dipakai bersama di beberapa perangkat. |
+| **Tutup** | Tekan **Tutup Sesi** di Beranda (perlu koneksi). Tidak bisa ditutup selama kontraksi masih berlangsung. Waktu selesai sesi = waktu selesai kontraksi terakhirnya. |
+| **Sesudahnya** | Kontraksi berikutnya otomatis membuka sesi baru. Sesi yang sudah ditutup tidak bisa dibuka lagi; datanya tetap ada di Riwayat, Grafik, dan laporan. |
+
+Sesi **tidak pernah ditutup otomatis**. Selama belum ditutup, kontraksi berikutnya — walau berjam-jam kemudian — tetap masuk ke sesi yang sama.
+
+**Pengaruh sesi di aplikasi**
+- **Interval** hanya dihitung antarkontraksi dalam sesi yang sama; kontraksi pertama di setiap sesi tidak memiliki interval.
+- **Beranda** menampilkan statistik *Sesi aktif*, atau *Sesi terakhir* bila tidak ada sesi aktif.
+- **Grafik** menampilkan satu sesi pilihan (30 sesi terbaru), termasuk perbandingan paruh awal vs paruh akhir sesi.
+- **Cetak laporan** dikelompokkan per sesi; tombol *Cetak laporan sesi* di Beranda/Grafik mencetak satu sesi saja.
+- **Riwayat** menampilkan semua kontraksi lintas sesi dan disaring berdasarkan tanggal, bukan sesi.
+- **Ringkasan 30/60 menit terakhir** berdasarkan waktu, tetapi interval hanya dihitung bila dua kontraksi berurutan berada di sesi yang sama.
+
+**Kapan menutup sesi?** Tutup sesi bila kontraksi berhenti atau mereda cukup lama — misalnya kontraksi palsu yang hilang setelah istirahat, atau setelah tiba di fasilitas kesehatan. Bila tidak ditutup, kontraksi berikutnya mendapat interval dari kontraksi lama sehingga rata-rata interval dan grafik tidak lagi mewakili. Contoh:
+
+```
+Sesi 1 (ditutup)  20:00  20:09  20:17   → interval: -, 09:00, 08:00
+                  … kontraksi berhenti, sesi ditutup …
+Sesi 2            06:30  06:36          → interval: -, 06:00
+```
+
+Tanpa menutup Sesi 1, kontraksi pukul 06:30 akan tercatat dengan interval `10:13:00` (10 jam 13 menit).
+
+> **Data offline:** kontraksi yang baru tersinkron setelah sesi ditutup masuk ke sesi yang aktif saat itu (atau membuka sesi baru), bukan ke sesi yang sudah ditutup. Bila masih ada badge *belum tersinkron*, tekan **Sinkronkan** dulu sebelum menutup sesi.
+
+---
+
 ## Cara kerja perhitungan
 
 | Besaran | Rumus |
@@ -226,7 +262,7 @@ Setelah memperbarui file JS/CSS di server, **naikkan nilai `VERSION`** di `publi
 | Rata-rata interval | total interval valid ÷ jumlah interval valid |
 
 - Interval **dihitung ulang otomatis** setelah tambah/edit/hapus, termasuk saat data offline tiba tidak berurutan.
-- **Sesi** dimulai otomatis saat kontraksi pertama dicatat dan dapat ditutup dengan tombol *Tutup Sesi*; kontraksi berikutnya masuk sesi baru.
+- **Sesi** dimulai otomatis saat kontraksi pertama dicatat dan dapat ditutup dengan tombol *Tutup Sesi*; kontraksi berikutnya masuk sesi baru. Lihat [Sesi pencatatan](#sesi-pencatatan).
 - Waktu dicatat dari **jam perangkat** (epoch ms), disimpan sebagai **UTC** di database, dan ditampilkan dalam **WIB**. Kontraksi yang melewati tengah malam tercatat pada tanggal mulainya.
 - Validasi: waktu di masa depan (> 5 menit), selesai sebelum mulai, durasi > 3 jam, dan kontraksi yang bertumpuk ditolak.
 
